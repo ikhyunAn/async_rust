@@ -14,14 +14,14 @@ pub struct Http;
 
 impl Http {
     // public interface, returns an implementation of Future with a String output
-    pub fn get(path: &str) -> impl Future<Output = String> {
+    pub fn get(path: &'static str) -> impl Future<Output = String> {
         HttpGetFuture::new(path)
     }
 }
 
 struct HttpGetFuture {
     stream: Option<mio::net::TcpStream>,    // optional TCP stream for the connection
-    bufer: Vec<u8>,                         // buffer to store data
+    buffer: Vec<u8>,                         // buffer to store data
     path: String,                           // path for HTTP GET request
 }
 
@@ -41,7 +41,7 @@ impl HttpGetFuture {
         stream.set_nonblocking(true).unwrap();
         let mut stream = mio::net::TcpStream::from_std(stream);
         // sending the GET request
-        stream.write_all(get_req(&self.path).as_bytest()).unwrap();
+        stream.write_all(get_req(&self.path).as_bytes()).unwrap();
         self.stream = Some(stream);
     }
 }

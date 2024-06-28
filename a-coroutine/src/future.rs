@@ -1,10 +1,10 @@
 pub trait Future {
-    type Ouput;
+    type Output;
     fn poll(&mut self) -> PollState<Self::Output>;
 }
 
-pub enum PollState {
+pub enum PollState<T> {
     Ready(T),
-    Pending,
+    NotReady,
 }
 
