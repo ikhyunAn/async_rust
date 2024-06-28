@@ -14,7 +14,7 @@ pub struct Http;
 
 impl Http {
     // public interface, returns an implementation of Future with a String output
-    pub fn get(path: &'static str) -> impl Future<Output = String> {
+    pub fn get(path: &str) -> impl Future<Output = String> {
         HttpGetFuture::new(path)
     }
 }
@@ -26,7 +26,7 @@ struct HttpGetFuture {
 }
 
 impl HttpGetFuture {
-    fn new(path: &'static str) -> Self {
+    fn new(path: &str) -> Self {
         Self {
             stream: None,
             buffer: vec![],
