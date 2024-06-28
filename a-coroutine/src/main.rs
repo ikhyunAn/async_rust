@@ -18,6 +18,15 @@ Code Structure principles:
 
 /*
 loop in the main function drives the asynchronous operations to completion
+
+similar to:
+async fn async_main() {
+    println!("Async Program starting");
+    let txt = Http::get("/1000/HelloWorld").await;
+    println!("{txt}");
+    let txt2 = Http::("500/HelloWorld2").await;
+    println!("{txt2}");
+}
 */
 fn main() {
     let mut future = async_main();
@@ -100,11 +109,4 @@ impl Future for Coroutine {
 fn async_main() -> impl Future<Output = ()> {
     Coroutine::new()            // create a new Coroutine
 }
-// async fn async_main() {
-    //     println!("Async Program starting");
-    //     let txt = Http::get("/1000/HelloWorld").await;
-    //     println!("{txt}");
-    //     let txt2 = Http::("500/HelloWorld2").await;
-    //     println!("{txt2}");
-    // }
-    
+  
