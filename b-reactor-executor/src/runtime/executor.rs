@@ -84,7 +84,7 @@ impl Executor {
     }
 
     fn get_future(&self, id: usize) -> Option<Task> {
-        CURRENT_EXEC.with(|q| q.tasks.borrow_mut().remove(&id))
+        CURRENT_EXEC.with(|q| q.tasks.borrow_mut().remove(&id))     // takes ownership and returns it
     }
 
     fn get_waker(&self, id: usize) -> Waker {
@@ -114,29 +114,32 @@ impl Executor {
     where
         F: Future<Output = String> + 'static,
     {
-        spawn(future);
+        spawn(future);  // spawn the future onto the current executor
+        // loop runs as long as the asynchronous program runs
         loop {
-              while let Some(id) = self.pop_ready() {
-                      let mut future = match self.get_future(id) {
-                        Some(f) => f,
-                        // guard against false wakeups
-                        None => continue,
-                      };
-                      let waker = self.get_waker(id);
-                      match future.poll(&waker) {
-                        PollState::NotReady => self.insert_task(id, future),
-                        PollState::Ready(_) => continue,
-                      }
+            // while loop runs as long as there are tasks in `ready_queue`
+            while let Some(id) = self.pop_ready() {
+                let mut future = match self.get_future(id) {
+                    Some(f) => f,
+                    // guard against false wakeups; mio doesn't guarantee false wakeups won't happen
+                    None => continue,
+                };
+                let waker = self.get_waker(id);
+                match future.poll(&waker) {
+                    PollState::NotReady => self.insert_task(id, future),    // back to tasks collection, will be waken up by Waker::wake
+                    PollState::Ready(_) => continue,        // Future object will be dropped since we have the ownership
                 }
-                let task_count = self.task_count();
-                let name = thread::current().name().unwrap_or_default().to_string();
-                if task_count > 0 {
-                  println!("{name}: {task_count} pending tasks. Sleep until notified.");
-                  thread::park();
-                } else {
-                  println!("{name}: All tasks are finished");
-                  break;
-                }
+            }
+            let task_count = self.task_count();
+            let name = thread::current().name().unwrap_or_default().to_string();
+
+            if task_count > 0 {
+                println!("{name}: {task_count} pending tasks. Sleep until notified.");
+                thread::park();     // yields control back to the OS scheduler and Executor is put to sleep
+            } else {
+                println!("{name}: All tasks are finished");
+                break;              // Done with the async program and exit the main `loop`
+            }
           }
     }
 }
