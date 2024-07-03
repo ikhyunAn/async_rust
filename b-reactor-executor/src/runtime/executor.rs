@@ -62,7 +62,7 @@ where
         let id =  e.next_id.get();
         e.tasks.borrow_mut().insert(id, Box::new(future));      // store in HashMap
         e.ready_queue.lock().map(|mut q| q.push(id)).unwrap();  // add to ready_queue to poll it at least once
-        e.next_id.set(id + 1;)
+        e.next_id.set(id + 1);
     });
 }
 
@@ -96,7 +96,7 @@ impl Executor {
     }
 
     fn insert_task(&self, id: usize, task: Task) {
-        CURRENT_EXEC.with(|q| q.tasks.borrow_mut().inser(id, task));
+        CURRENT_EXEC.with(|q| q.tasks.borrow_mut().insert(id, task));
     }
 
     fn task_count(&self) -> usize {

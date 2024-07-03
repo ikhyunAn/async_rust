@@ -23,14 +23,17 @@ struct HttpGetFuture {
     stream: Option<mio::net::TcpStream>,
     buffer: Vec<u8>,
     path: String,
+    id: usize,
 }
 
 impl HttpGetFuture {
     fn new(path: &str) -> Self {
+        let id = reactor().next_id();       // retrive new ID from the reactor when future is created
         Self {
             stream: None,
             buffer: vec![],
             path: path.to_string(),
+            id,
         }
     }
 
@@ -52,16 +55,26 @@ impl Future for HttpGetFuture {
             self.write_request();
             // remove the following line to poll TcpStream immediately
             // return PollState::NotReady;
-            runtime::registry()
-                .register(self.stream.as_mut().unwrap(), Token(0), Interest::READABLE)
-                    .unwrap();
+            
+            // no longer register directly with Registry:
+            // runtime::registry()
+            //     .register(self.stream.as_mut().unwrap(), Token(0), Interest::READABLE)
+            //         .unwrap();
+            //
+
+            // register interest with Poll instance and register the Waker reaceived with the Reactor
+            let stream = self.stream.as_mut().unwrap();
+            runtime::reactor().register(stream, Interest::READABLE, self.id);
+            runtime::reactor().set_waker(waker, self.id);
         }
 
         let mut buff = vec![0u8; 4096];
         loop {
             match self.stream.as_mut().unwrap().read(&mut buff) {
+                // deregister stream from the `Poll` when done
                 Ok(0) => {
                     let s = String::from_utf8_lossy(&self.buffer);
+                    runtime::reactor().deregister(self.stream.as_mut().unwrap(), self.id);
                     break PollState::Ready(s.to_string());
                 }
                 Ok(n) => {
@@ -69,6 +82,7 @@ impl Future for HttpGetFuture {
                     continue;
                 }
                 Err(e) if e.kind() == ErrorKind::WouldBlock => {
+                    runtime::reactor().set_waker(waker, self.id);
                     break PollState::NotReady;
                 }
                 Err(e) if e.kind() == ErrorKind::Interrupted => {
